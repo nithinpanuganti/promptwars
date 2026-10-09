@@ -1,0 +1,111 @@
+
+<div id="pw-counter" style="max-width:600px;margin:auto;padding:22px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;color:#111827;font-family:Arial,sans-serif">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <strong style="font-size:20px">Prompt Wars</strong>
+    <span id="pw-status" style="padding:6px 10px;border-radius:20px;background:#dcfce7;color:#166534;font-size:12px;font-weight:bold">LOADING</span>
+  </div>
+
+  <div id="pw-remaining" style="margin-top:22px;font-size:34px;font-weight:800">-- seats left</div>
+  <div id="pw-registered" style="margin-top:6px;color:#6b7280;font-size:14px">Checking registrations...</div>
+
+  <div style="height:12px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin-top:18px">
+    <div id="pw-bar" style="height:100%;width:0%;background:#16a34a;border-radius:20px;transition:width .4s"></div>
+  </div>
+
+  <div id="pw-percent" style="margin-top:8px;text-align:right;color:#6b7280;font-size:13px">0% filled</div>
+  <div id="pw-message" style="margin-top:14px;font-size:14px">Limited seats available. Register now!</div>
+</div>
+
+<script>
+(function () {
+  const API = "https://script.google.com/macros/s/AKfycbxwPPFdmeWHTd3Xk66i5q2m_IWjNQmPia7ksgnWurtkCv7IG9tG8oqOsF4Q2P1qPcYEog/exec";
+
+  const remaining = document.getElementById("pw-remaining");
+  const registered = document.getElementById("pw-registered");
+  const bar = document.getElementById("pw-bar");
+  const percent = document.getElementById("pw-percent");
+  const status = document.getElementById("pw-status");
+  const message = document.getElementById("pw-message");
+
+  function showError() {
+    status.textContent = "UNAVAILABLE";
+    status.style.background = "#fee2e2";
+    status.style.color = "#991b1b";
+    registered.textContent = "Unable to load the seat count. Please try again later.";
+  }
+
+  function refresh() {
+    const callback = "pwSeats_" + Date.now() + "_" +
+      Math.floor(Math.random() * 100000);
+    const script = document.createElement("script");
+    let finished = false;
+
+    const timer = setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      delete window[callback];
+      script.remove();
+      showError();
+    }, 12000);
+
+    window[callback] = function (data) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      delete window[callback];
+      script.remove();
+
+      if (!data || data.error) {
+        showError();
+        return;
+      }
+
+      const total = Number(data.capacity);
+      const count = Number(data.registered);
+      const left = Number(data.remaining);
+      const filled = Number(data.percentage);
+
+      if (![total, count, left, filled].every(Number.isFinite) || total <= 0) {
+        showError();
+        return;
+      }
+
+      remaining.textContent = left + (left === 1 ? " seat left" : " seats left");
+      registered.textContent = count + " / " + total + " registrations";
+      bar.style.width = Math.max(0, Math.min(100, filled)) + "%";
+      percent.textContent = Math.round(filled) + "% filled";
+
+      if (left === 0) {
+        status.textContent = "FULL";
+        status.style.background = "#fee2e2";
+        status.style.color = "#991b1b";
+        bar.style.background = "#dc2626";
+        message.textContent = "All seats are filled.";
+      } else {
+        status.textContent = "REGISTRATION OPEN";
+        status.style.background = "#dcfce7";
+        status.style.color = "#166534";
+        bar.style.background = filled >= 80 ? "#f97316" : "#16a34a";
+        message.textContent = left <= 50
+          ? "Hurry! Only " + left + " seats remain."
+          : "Limited seats available. Register now!";
+      }
+    };
+
+    script.onerror = function () {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      delete window[callback];
+      script.remove();
+      showError();
+    };
+
+    script.src = API + "?callback=" + callback;
+    document.head.appendChild(script);
+  }
+
+  refresh();
+  setInterval(refresh, 30000);
+})();
+</script>
