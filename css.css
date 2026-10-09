@@ -1,0 +1,8 @@
+#pw-counter {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+#pw-counter * {
+  box-sizing: border-box;
+}
